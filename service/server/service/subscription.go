@@ -209,6 +209,26 @@ func UpdateSubscription(index int, disconnectIfNecessary bool) (err error) {
 		log.Warn("UpdateSubscription: %v: %v", err, subscriptionInfos)
 		return fmt.Errorf("UpdateSubscription: %v", reason)
 	}
+
+	// 过滤服务器
+	filteredInfos := make([]serverObj.ServerObj, 0)
+	for _, info := range subscriptionInfos {
+		serverName := info.GetName()
+		filter := subscriptions[index].Filter
+		
+		// 根据大小写敏感选项决定是否转换大小写
+		if !subscriptions[index].CaseSensitive {
+			serverName = strings.ToLower(serverName)
+			filter = strings.ToLower(filter)
+		}
+		
+		// 检查服务器名称是否包含过滤关键词
+		if strings.Contains(serverName, filter) {
+			filteredInfos = append(filteredInfos, info)
+		}
+	}
+	subscriptionInfos = filteredInfos
+
 	infoServerRaws := make([]configure.ServerRaw, len(subscriptionInfos))
 	css := configure.GetConnectedServers()
 	cssAfter := css.Get()
@@ -272,5 +292,6 @@ func ModifySubscriptionRemark(subscription touch.Subscription) (err error) {
 	}
 	raw.Remarks = subscription.Remarks
 	raw.Address = subscription.Address
+	raw.Filter = subscription.Filter
 	return configure.SetSubscription(subscription.ID-1, raw)
 }

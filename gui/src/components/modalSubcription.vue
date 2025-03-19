@@ -17,6 +17,17 @@
           :placeholder="$t('subscription.remarks')"
         />
       </b-field>
+      <b-field label="FILTER">
+        <b-input
+          v-model="which.filter"
+          :placeholder="$t('subscription.filter')"
+        />
+      </b-field>
+      <b-field>
+        <b-checkbox v-model="which.caseSensitive">
+          {{ $t('subscription.caseSensitive') }}
+        </b-checkbox>
+      </b-field>
     </section>
     <footer class="modal-card-foot flex-end">
       <button class="button" type="button" @click="$parent.close()">

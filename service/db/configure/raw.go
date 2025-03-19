@@ -18,6 +18,8 @@ type SubscriptionRaw struct {
 	Status  string      `json:"status"` //update time, error info, etc.
 	Servers []ServerRaw `json:"servers"`
 	Info    string      `json:"info"` // maybe include some info from provider
+	Filter  string      `json:"filter,omitempty"` // filter keyword for server names
+	CaseSensitive bool  `json:"caseSensitive,omitempty"` // whether to be case sensitive when filtering
 }
 
 func Bytes2SubscriptionRaw(b []byte) (*SubscriptionRaw, error) {
