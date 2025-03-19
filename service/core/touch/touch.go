@@ -33,6 +33,8 @@ type Subscription struct {
 	TYPE    configure.TouchType `json:"_type"`
 	Host    string              `json:"host"`
 	Address string              `json:"address"`
+	Filter  string             `json:"filter,omitempty"`
+	CaseSensitive bool         `json:"caseSensitive,omitempty"`
 	Status  SubscriptionStatus  `json:"status"`
 	Info    string              `json:"info"`
 	Servers []Server            `json:"servers"`
