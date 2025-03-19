@@ -101,7 +101,7 @@ jobs:
         version=$(echo $tag | sed 's/v//g')
         echo "VERSION=$version" >> $GITHUB_OUTPUT
         echo "VERSION=$version" >> $GITHUB_ENV
-        IMAGE="mzz2017/v2raya"
+        IMAGE="jaybuckeye2006/v2raya"
         echo image=${IMAGE} >> $GITHUB_OUTPUT
         echo tag=${{ inputs.tag }} >> $GITHUB_OUTPUT
         sed -i "s|Realv2rayAVersion|$version|g" install/docker/docker_helper.sh
