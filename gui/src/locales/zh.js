@@ -55,13 +55,11 @@ export default {
     cancel: "取消",
   },
   subscription: {
-    host: "主机",
-    remarks: "备注",
-    timeLastUpdate: "最后更新时间",
-    numberServers: "服务器数量",
-    subscription: "订阅地址",
-    filter: "过滤关键词（可选）",
-    caseSensitive: "区分大小写"
+    host: "域名",
+    remarks: "别名",
+    timeLastUpdate: "上次更新时间",
+    numberServers: "节点数",
+    subscription: "订阅",
   },
   operations: {
     name: "操作",
@@ -79,19 +77,19 @@ export default {
     disconnect: "断开",
     select: "选择",
     login: "登录",
-    logout: "退出",
+    logout: "注销",
     configure: "配置",
     cancel: "取消",
-    confirm: "确认",
-    confirm2: "确认",
+    confirm: "确定",
+    confirm2: "确认无误",
     saveApply: "保存并应用",
     save: "保存",
     copyLink: "复制链接",
-    helpManual: "帮助手册",
+    helpManual: "查看帮助",
     yes: "是",
     no: "否",
-    switchSite: "切换到备用站点",
-    addOutbound: "添加出站节点",
+    switchSite: "切换至备用站点",
+    addOutbound: "新增一个出站 (outbound)",
     domainsExcluded: "排除域名"
   },
   register: {
@@ -148,7 +146,7 @@ export default {
       inboundSniffing: "嗅探入站域名，如不开启，可能导致部分域名分流错误",
       gfwlist: "该时间是指本地文件最后修改时间，因此可能会领先最新版本",
       transparentProxy:
-        "全局代理开启后，无需经过额外设置，任何TCP流量均会经过V2RayA。另外，如需作为网关使得连接本机的其他主机或docker也享受代理，请勾选"开启局域网共享"。",
+        "全局代理开启后，无需经过额外设置，任何TCP流量均会经过V2RayA。另外，如需作为网关使得连接本机的其他主机或docker也享受代理，请勾选“开启局域网共享”。",
       transparentType:
         "★tproxy: 支持udp，不支持docker。★redirect: docker友好，不支持udp，需要占用本地53端口以应对dns污染。",
       pacMode:
@@ -227,8 +225,8 @@ export default {
     internalQueryServers: "域名查询服务器",
     externalQueryServers: "国外域名查询服务器",
     messages: [
-      "@:(dns.internalQueryServers) 用于查询国内域名，而 "@:(dns.externalQueryServers)" 用于查询国外域名。",
-      "如果将 "@:(dns.externalQueryServers)" 留空，"@:(dns.internalQueryServers)" 将会负责查询所有域名。",
+      "“@:(dns.internalQueryServers)” 用于查询国内域名，而 “@:(dns.externalQueryServers)” 用于查询国外域名。",
+      "如果将 “@:(dns.externalQueryServers)” 留空，“@:(dns.internalQueryServers)” 将会负责查询所有域名。",
     ],
   },
   egressPortWhitelist: {
@@ -309,7 +307,7 @@ export default {
     },
   },
   routingA: {
-    messages: ["点击"查看帮助"按钮以获取帮助"],
+    messages: ["点击“查看帮助”按钮以获取帮助"],
   },
   outbound: {
     addMessage: "请输入你想要添加的出站(outbound)名称：",
