@@ -87,9 +87,61 @@ jobs:
         path: |
           v2raya_binaries/*
 
+  GitHub_Release:
+    runs-on: ubuntu-22.04
+    needs: [Build_v2rayA_Binaries] 
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Check Version
+      id: prep
+      env:
+        REF: ${{ inputs.tag }}
+      run: |
+        tag=${{ inputs.tag }}
+        version=$(echo $tag | sed 's/v//g')
+        echo "VERSION=$version" >> $GITHUB_OUTPUT
+        echo "VERSION=$version" >> $GITHUB_ENV
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: builds/
+    - name: Move Files to Release Directory
+      shell: bash
+      run: |
+        mkdir -p release
+        for file in $(ls builds | grep -E "^installer|^v2raya"); do
+          mv builds/$file/$file release/
+        done
+        mv builds/web.tar.gz/web.tar.gz release/
+        for file in $(ls release); do
+          sha256sum release/$file | awk '{print $1}' > release/$file.sha256.txt
+        done
+        ls -l release/
+    - name: Compress Web Files
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ./builds/web/* -DestinationPath ./web.zip
+        ((Get-FileHash ./web.zip).hash).ToLower() > web.zip.sha256.txt
+        Move-Item ./web.zip ./release/web.zip
+        Move-Item ./web.zip.sha256.txt ./release/web.zip.sha256.txt
+    - name: Upload Release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo "Don't upload SingTun binaries to GitHub Release for they are not stable."
+        rm -f release/v2raya_with_singtun_*
+        Latest_Releases=$(curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/v2rayA/v2rayA/releases/latest | jq -r '.tag_name')
+        Latest_tag=v${{ steps.prep.outputs.VERSION }}
+        if [ "$Latest_Releases" != "$Latest_tag" ]; then
+          gh release create "v${{ steps.prep.outputs.VERSION }}" -t "v${{ steps.prep.outputs.VERSION }}" --generate-notes
+        fi
+        gh release upload "v${{ steps.prep.outputs.VERSION }}" release/*
+   
   Release_v2rayA_to_Docker:
     runs-on: ubuntu-22.04
-    needs: [Build_v2rayA_Binaries]
+    needs: [GitHub_Release]
     steps:
     - uses: actions/checkout@v4
       with:
