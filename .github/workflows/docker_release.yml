@@ -1,0 +1,136 @@
+name: Build & Release v2rayA Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - dependabot/*
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "gui/**"
+      - ".github/workflows/*.yml"
+
+  workflow_dispatch:
+
+jobs:
+  Build_v2rayA_Web:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Node.js
+      shell: bash
+      run: |
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        brew install node@20
+        echo "PATH=\"$(brew --prefix)/opt/node@20/bin:$PATH\"" >> $GITHUB_ENV
+        echo "PATH=\"$(brew --prefix)/opt/node@20/bin:$PATH\"" >> ~/.bash_profile
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update -y && sudo apt-get install -y gzip
+    - name: Build GUI
+      run: |
+        yarn --cwd gui --check-files
+        yarn --cwd gui build
+        echo "Use tar to generate web.tar.gz..."
+        tar -zcvf web.tar.gz web/
+    - name: Upload Zip File to Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        path: web/*
+        name: web
+    - name: Upload the tar archive to Artifacts
+      uses: nanoufo/action-upload-artifacts-and-release-assets@v2
+      with:
+        path: |
+          web.tar.gz
+
+  Build_v2rayA_Binaries:
+    runs-on: ubuntu-latest
+    needs: [Build_v2rayA_Web]
+    env:
+      CGO_ENABLED: 0
+      NAME: v2raya
+      DESC: "A web GUI client of Project V which supports VMess, VLESS, SS, SSR, Trojan, Tuic and Juicity protocols"
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Download Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: web
+        path: service/server/router/web
+    - name: Check Version
+      id: prep
+      env:
+        REF: ${{ inputs.tag }}
+      run: |
+        tag=${{ inputs.tag }}
+        version=$(echo $tag | sed 's/v//g')
+        echo "VERSION=$version" >> $GITHUB_OUTPUT
+        echo "VERSION=$version" >> $GITHUB_ENV
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        cache-dependency-path: |
+          service/go.mod
+          service/go.sum
+        go-version: ^1.21
+    - name: Build v2rayA Binaries
+      id: build
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path v2raya_binaries
+        $env:GOARCH = 'amd64'
+        $filename = $((Get-Content ./install/friendly-filenames.json | ConvertFrom-Json)."linux-amd64")."friendlyName"
+        Set-Location -Path service
+        go build -tags "with_gvisor" -o ../v2raya_binaries/v2raya_${filename}_${env:VERSION} -ldflags="-X github.com/v2rayA/v2rayA/conf.Version=${env:VERSION} -s -w" -trimpath
+        Set-Location -Path ..
+    - name: Upload Artifact
+      uses: nanoufo/action-upload-artifacts-and-release-assets@v2
+      with:
+        path: |
+          v2raya_binaries/*
+
+  Release_v2rayA_to_Docker:
+    runs-on: ubuntu-22.04
+    needs: [Build_v2rayA_Binaries]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Check Version
+      id: prep
+      run: |
+        tag=${{ inputs.tag }}
+        version=$(echo $tag | sed 's/v//g')
+        echo "VERSION=$version" >> $GITHUB_OUTPUT
+        echo "VERSION=$version" >> $GITHUB_ENV
+        IMAGE="jaybuckeye2006/v2raya"
+        echo image=${IMAGE} >> $GITHUB_OUTPUT
+        echo tag=${{ inputs.tag }} >> $GITHUB_OUTPUT
+        sed -i "s|Realv2rayAVersion|$version|g" install/docker/docker_helper.sh
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3.0.0
+    - name: Login to DockerHub
+      uses: docker/login-action@v3.0.0
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Build and push
+      uses: docker/build-push-action@v5.0.0
+      with:
+        context: .
+        builder: ${{ steps.buildx.outputs.name }}
+        file: install/docker/Dockerfile.Action
+        platforms: linux/amd64
+        push: true
+        tags: |
+          ${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}
+          ${{ steps.prep.outputs.image }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max 

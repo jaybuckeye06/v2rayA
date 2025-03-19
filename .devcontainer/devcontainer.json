@@ -1,0 +1,21 @@
+{
+  "name": "v2rayA Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "golang.go",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode"
+  ],
+  "runArgs": [
+    "--privileged",
+    "-v",
+    "/var/run/docker.sock:/var/run/docker.sock"
+  ],
+  "postCreateCommand": "yarn --cwd gui install && yarn --cwd gui build",
+  "remoteUser": "vscode"
+}
