@@ -71,7 +71,7 @@ export default {
     view: "View",
     delete: "Delete",
     create: "Create",
-    import: "Import",
+    import: "Import✓",
     inBatch: "In batch",
     connect: "Connect",
     disconnect: "Disconnect",

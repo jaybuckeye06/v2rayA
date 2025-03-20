@@ -1,5 +1,7 @@
 FROM alpine:latest AS builder
 WORKDIR /
+
+COPY ./v2raya_binaries/v2raya_linux ./v2raya_linux
 COPY ./install/docker/docker_helper.sh ./docker_helper.sh
 COPY ./install/docker/iptables.sh ./iptables.sh
 COPY ./install/docker/ip6tables.sh ./ip6tables.sh

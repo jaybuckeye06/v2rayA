@@ -15,7 +15,7 @@ case "$ARCH" in
 esac
 
 # Define variables
-VERSION="2.2.6.6"  # You can change this dynamically
+VERSION="2.2.6.5"  # You can change this dynamically
 DOCKER_IMAGE="jaybuckeye2006/v2raya"
 
 echo "Using detected architecture: $GOARCH"
@@ -39,7 +39,7 @@ build_binaries() {
     mkdir -p service/server/router/web && mv web/* service/server/router/web/
     mkdir -p v2raya_binaries
     cd service
-    go build -tags "with_gvisor" -o ../v2raya_binaries/v2raya_linux-${GOARCH}_${VERSION} -ldflags="-X github.com/v2rayA/v2rayA/conf.Version=${VERSION} -s -w" -trimpath
+    go build -tags "with_gvisor" -o ../v2raya_binaries/v2raya_linux -ldflags="-X github.com/v2rayA/v2rayA/conf.Version=${VERSION} -s -w" -trimpath
     cd ..
 }
 
