@@ -617,6 +617,29 @@
             @icon-right-click="handleClickImportQRCode"
             @keyup.native="handleImportEnter"
           ></b-input>
+          
+          <!-- Dynamic filter fields -->
+          <div class="mt-3">
+            <p class="has-text-weight-medium mb-2">Filters</p>
+            <div v-for="(filter, index) in filterFields" :key="index" class="field is-grouped mb-2">
+              <p class="control is-expanded">
+                <b-input
+                  v-model="filter.value"
+                  placeholder="Enter filter keyword"
+                  icon="filter-variant"
+                ></b-input>
+              </p>
+              <p class="control">
+                <button class="button is-danger is-small" @click="removeFilterField(index)">
+                  <b-icon icon="close"></b-icon>
+                </button>
+              </p>
+            </div>
+            <button class="button is-small is-info" @click="addFilterField">
+              <b-icon icon="plus"></b-icon>
+              <span>Add Filter</span>
+            </button>
+          </div>
         </section>
         <footer class="modal-card-foot">
           <button
@@ -779,6 +802,7 @@ export default {
       connectedServerInfo: [],
       overHeight: false,
       clipboard: null,
+      filterFields: [],
     };
   },
   computed: {
@@ -1229,7 +1253,9 @@ export default {
         },
       }).then((res) => {
         if (res.data.code === "SUCCESS") {
-          this.refreshTableData(res.data.data.touch, res.data.data.running);
+          // Filter the subscriptions before updating the table data
+          const filteredData = this.filterSubscriptions(res.data.data.touch);
+          this.refreshTableData(filteredData, res.data.data.running);
           this.updateConnectView();
           this.$buefy.toast.open({
             message: this.$t("common.success"),
@@ -1249,6 +1275,29 @@ export default {
           });
         }
       });
+    },
+    filterSubscriptions(touch) {
+      const keywords = this.filterFields
+        .map(f => f.value.trim())
+        .filter(Boolean); // Remove empty filters
+
+      if (keywords.length === 0) {
+        return touch;
+      }
+
+      return {
+        ...touch,
+        subscriptions: touch.subscriptions.map(sub => ({
+          ...sub,
+          servers: sub.servers.filter(server => {
+            const serverName = server.name.toLowerCase();
+            // Changed from some() to every() to implement AND logic
+            return keywords.every(keyword => 
+              serverName.includes(keyword.toLowerCase())
+            );
+          })
+        }))
+      };
     },
     deleteSelectedServers() {
       this.$axios({
@@ -1566,6 +1615,12 @@ export default {
           this.updateConnectView();
         });
       });
+    },
+    addFilterField() {
+      this.filterFields.push({ value: '' });
+    },
+    removeFilterField(index) {
+      this.filterFields.splice(index, 1);
     },
   },
 };
