@@ -13,6 +13,11 @@ on:
       - ".github/workflows/*.yml"
 
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
 
 jobs:
   Build_v2rayA_Web:
@@ -106,13 +111,16 @@ jobs:
     - name: Check Version
       id: prep
       run: |
-        tag=${{ inputs.tag }}
-        version=$(echo $tag | sed 's/v//g')
+        if [ -z "${{ inputs.tag }}" ]; then
+          echo "Error: Tag input is required"
+          exit 1
+        fi
+        version=$(echo ${{ inputs.tag }} | sed 's/v//g')
         echo "VERSION=$version" >> $GITHUB_OUTPUT
         echo "VERSION=$version" >> $GITHUB_ENV
         IMAGE="jaybuckeye2006/v2raya"
-        echo image=${IMAGE} >> $GITHUB_OUTPUT
-        echo tag=${{ inputs.tag }} >> $GITHUB_OUTPUT
+        echo "image=${IMAGE}" >> $GITHUB_OUTPUT
+        echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
         sed -i "s|Realv2rayAVersion|$version|g" install/docker/docker_helper.sh
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3.0.0
