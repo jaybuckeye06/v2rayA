@@ -15,7 +15,7 @@ case "$ARCH" in
 esac
 
 # Define variables
-VERSION="2.2.6.5"  # You can change this dynamically
+VERSION="2.2.6.6"  # You can change this dynamically
 DOCKER_IMAGE="jaybuckeye2006/v2raya"
 
 echo "Using detected architecture: $GOARCH"

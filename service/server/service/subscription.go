@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -199,6 +200,12 @@ func getDataUsageStatus(bytesUsed, bytesRemaining uint64) (status string) {
 	return
 }
 
+type serverWithLatency struct {
+	server  configure.Which
+	latency int64
+	index   int
+}
+
 func UpdateSubscription(index int, disconnectIfNecessary bool, filters []string) (err error) {
 	subscriptions := configure.GetSubscriptions()
 	addr := subscriptions[index].Address
@@ -210,6 +217,8 @@ func UpdateSubscription(index int, disconnectIfNecessary bool, filters []string)
 		log.Warn("UpdateSubscription: %v: %v", err, subscriptionInfos)
 		return fmt.Errorf("UpdateSubscription: %v", reason)
 	}
+
+	log.Info("Resolved %d servers from subscription", len(subscriptionInfos))
 
 	// Use stored filters if no new filters provided
 	if len(filters) == 0 {
@@ -225,6 +234,7 @@ func UpdateSubscription(index int, disconnectIfNecessary bool, filters []string)
 			}
 		}
 		subscriptionInfos = filteredInfos
+		log.Info("After filtering: %d servers remain", len(subscriptionInfos))
 	}
 
 	infoServerRaws := make([]configure.ServerRaw, len(subscriptionInfos))
@@ -244,39 +254,134 @@ func UpdateSubscription(index int, disconnectIfNecessary bool, filters []string)
 			}
 		}
 	}
-	//将列表更换为新的，并且找到一个跟现在连接的server值相等的，设为Connected，如果没有，则断开连接
+
+	log.Info("Currently connected servers from this subscription: %d", len(connectedVmessInfo2CssIndex))
+
+	// Create a map of available servers for quick lookup
+	availableServers := make(map[string]int)
 	for i, info := range subscriptionInfos {
 		infoServerRaw := configure.ServerRaw{
 			ServerObj: info,
 		}
 		link := infoServerRaw.ServerObj.ExportToURL()
-		if cssIndexes, ok := connectedVmessInfo2CssIndex[link]; ok {
-			for _, cssIndex := range cssIndexes {
-				cssAfter[cssIndex].ID = i + 1
-			}
-			delete(connectedVmessInfo2CssIndex, link)
-		}
+		availableServers[link] = i + 1
 		infoServerRaws[i] = infoServerRaw
 	}
+
+	// Track which servers to disconnect
+	serversToDisconnect := make([]int, 0)
+	// Track which servers to keep
+	serversToKeep := make([]int, 0)
+
+	// Check each connected server
 	for link, cssIndexes := range connectedVmessInfo2CssIndex {
-		for _, cssIndex := range cssIndexes {
-			if disconnectIfNecessary {
-				err = Disconnect(*css.Get()[cssIndex], false)
-				if err != nil {
-					reason := "failed to disconnect previous server"
-					return fmt.Errorf("UpdateSubscription: %v", reason)
-				}
-			} else {
-				// 将之前连接的节点append进去
-				// TODO: 变更ServerRaw时可能需要考虑
-				infoServerRaws = append(infoServerRaws, *link2Raw[link])
-				cssAfter[cssIndex].ID = len(infoServerRaws)
+		if _, exists := availableServers[link]; exists {
+			// Server is still available, keep it
+			for _, cssIndex := range cssIndexes {
+				cssAfter[cssIndex].ID = availableServers[link]
+				serversToKeep = append(serversToKeep, cssIndex)
+			}
+			sr, err := css.Get()[cssIndexes[0]].LocateServerRaw()
+			if err != nil {
+				log.Warn("Failed to get server info: %v", err)
+				continue
+			}
+			log.Info("Keeping server: %s (ID: %d)", sr.ServerObj.GetName(), availableServers[link])
+		} else {
+			// Server is no longer available, mark for disconnection
+			for _, cssIndex := range cssIndexes {
+				serversToDisconnect = append(serversToDisconnect, cssIndex)
+			}
+			sr, err := css.Get()[cssIndexes[0]].LocateServerRaw()
+			if err != nil {
+				log.Warn("Failed to get server info: %v", err)
+				continue
+			}
+			log.Info("Server no longer available: %s", sr.ServerObj.GetName())
+		}
+	}
+
+	// Disconnect unavailable servers
+	for _, cssIndex := range serversToDisconnect {
+		if disconnectIfNecessary {
+			cs := css.Get()[cssIndex]
+			sr, err := cs.LocateServerRaw()
+			if err != nil {
+				log.Warn("Failed to get server info: %v", err)
+				continue
+			}
+			log.Info("Disconnecting server: %s", sr.ServerObj.GetName())
+			err = Disconnect(*cs, false)
+			if err != nil {
+				reason := "failed to disconnect previous server"
+				return fmt.Errorf("UpdateSubscription: %v", reason)
 			}
 		}
 	}
-	if err := configure.OverwriteConnects(configure.NewWhiches(cssAfter)); err != nil {
-		return err
+
+	// Calculate how many new servers we need
+	currentConnectedCount := len(serversToKeep)
+	neededNewServers := 8 - currentConnectedCount
+
+	log.Info("Current connected servers: %d, Need to add: %d", currentConnectedCount, neededNewServers)
+
+	if neededNewServers > 0 {
+		// Get all available servers that aren't already connected
+		availableForNew := make([]serverWithLatency, 0)
+		for i := range subscriptionInfos {
+			// Skip if this server is already connected
+			isAlreadyConnected := false
+			for _, cssIndex := range serversToKeep {
+				if cssAfter[cssIndex].ID == i+1 {
+					isAlreadyConnected = true
+					break
+				}
+			}
+			if !isAlreadyConnected {
+				availableForNew = append(availableForNew, serverWithLatency{
+					server: configure.Which{
+						TYPE: configure.SubscriptionServerType,
+						ID:   i + 1,
+						Sub:  index,
+					},
+					index: i + 1,
+				})
+			}
+		}
+
+		log.Info("Found %d new servers to test", len(availableForNew))
+
+		// Ping all available servers
+		for i := range availableForNew {
+			err := availableForNew[i].server.Ping(5 * time.Second)
+			if err != nil {
+				log.Warn("Failed to ping server %v: %v", availableForNew[i].server.ID, err)
+				continue
+			}
+			// Parse latency from string like "123ms"
+			if latency, err := strconv.ParseInt(strings.TrimSuffix(availableForNew[i].server.Latency, "ms"), 10, 64); err == nil {
+				availableForNew[i].latency = latency
+				log.Info("Server %v ping result: %vms", availableForNew[i].server.ID, latency)
+			}
+		}
+
+		// Sort by latency
+		sort.Slice(availableForNew, func(i, j int) bool {
+			return availableForNew[i].latency < availableForNew[j].latency
+		})
+
+		// Connect to top N servers
+		for i := 0; i < neededNewServers && i < len(availableForNew); i++ {
+			server := availableForNew[i]
+			log.Info("Connecting to server %v (latency: %vms)", server.server.ID, server.latency)
+			if err = Connect(&server.server); err != nil {
+				log.Warn("Failed to connect to server %v: %v", server.server.ID, err)
+				continue
+			}
+			log.Info("Successfully connected to server %v", server.server.ID)
+		}
 	}
+
 	subscriptions[index].Servers = infoServerRaws
 	subscriptions[index].Status = string(touch.NewUpdateStatus())
 	subscriptions[index].Info = status
@@ -284,7 +389,14 @@ func UpdateSubscription(index int, disconnectIfNecessary bool, filters []string)
 	if len(filters) > 0 {
 		subscriptions[index].Filters = filters
 	}
-	return configure.SetSubscription(index, &subscriptions[index])
+	if err := configure.SetSubscription(index, &subscriptions[index]); err != nil {
+		return err
+	}
+
+	log.Info("Subscription update completed. Total servers: %d, Connected: %d",
+		len(subscriptionInfos), len(serversToKeep)+neededNewServers)
+
+	return nil
 }
 
 func ModifySubscriptionRemark(subscription touch.Subscription) (err error) {
