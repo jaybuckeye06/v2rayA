@@ -667,6 +667,7 @@
             <button
               class="button"
               type="button"
+              :disabled="isImporting"
               @click="showModalImport = false"
             >
               {{ $t("operations.cancel") }}
@@ -674,6 +675,8 @@
             <button
               class="button is-primary"
               type="button"
+              :class="{'is-loading': isImporting}"
+              :disabled="isImporting"
               @click="handleClickImportConfirm"
             >
               {{ $t("operations.confirm") }}
@@ -714,6 +717,7 @@
             <button
               class="button"
               type="button"
+              :disabled="isImporting"
               @click="
                 () => {
                   showModalImport = false;
@@ -726,6 +730,8 @@
             <button
               class="button is-primary"
               type="button"
+              :class="{'is-loading': isImporting}"
+              :disabled="isImporting"
               @click="handleClickImportConfirm"
             >
               {{ $t("operations.confirm") }}
@@ -811,6 +817,7 @@ export default {
       overHeight: false,
       clipboard: null,
       filterFields: [{ value: '' }],
+      isImporting: false,
     };
   },
   computed: {
@@ -1258,6 +1265,8 @@ export default {
         .map(f => f.value.trim())
         .filter(Boolean);
 
+      this.isImporting = true;
+
       return this.$axios({
         url: apiRoot + "/import",
         method: "post",
@@ -1265,6 +1274,7 @@ export default {
           url: value || this.importWhat,
           filters: filters
         },
+        timeout: 60000, // 1 minute timeout
       }).then((res) => {
         if (res.data.code === "SUCCESS") {
           this.refreshTableData(res.data.data.touch, res.data.data.running);
@@ -1288,6 +1298,8 @@ export default {
             queue: false,
           });
         }
+      }).finally(() => {
+        this.isImporting = false;
       });
     },
     deleteSelectedServers() {
