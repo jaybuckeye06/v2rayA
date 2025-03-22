@@ -50,7 +50,7 @@ build_docker_image() {
     cp install/docker/docker_helper.sh install/docker/docker_helper.sh.bak
     # Modify the version in the original file
     sed -i "s|Realv2rayAVersion|$VERSION|g" install/docker/docker_helper.sh
-    sudo docker build -t "$DOCKER_IMAGE:$VERSION" -t "$DOCKER_IMAGE:latest" -f install/docker/Dockerfile.Action .
+    sudo docker build -t "$DOCKER_IMAGE:$VERSION" -t "$DOCKER_IMAGE:latest" -f install/docker/Dockerfile.local.Action .
     # Restore original docker_helper.sh
     mv install/docker/docker_helper.sh.bak install/docker/docker_helper.sh
 }
