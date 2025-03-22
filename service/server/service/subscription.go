@@ -4,6 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	jsoniter "github.com/json-iterator/go"
 	"github.com/v2rayA/v2rayA/common"
 	"github.com/v2rayA/v2rayA/common/httpClient"
@@ -12,13 +20,6 @@ import (
 	"github.com/v2rayA/v2rayA/core/touch"
 	"github.com/v2rayA/v2rayA/db/configure"
 	"github.com/v2rayA/v2rayA/pkg/util/log"
-	"io"
-	"net"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type SIP008 struct {
@@ -198,7 +199,7 @@ func getDataUsageStatus(bytesUsed, bytesRemaining uint64) (status string) {
 	return
 }
 
-func UpdateSubscription(index int, disconnectIfNecessary bool) (err error) {
+func UpdateSubscription(index int, disconnectIfNecessary bool, filters []string) (err error) {
 	subscriptions := configure.GetSubscriptions()
 	addr := subscriptions[index].Address
 	c := httpClient.GetHttpClientAutomatically()
@@ -209,6 +210,23 @@ func UpdateSubscription(index int, disconnectIfNecessary bool) (err error) {
 		log.Warn("UpdateSubscription: %v: %v", err, subscriptionInfos)
 		return fmt.Errorf("UpdateSubscription: %v", reason)
 	}
+
+	// Use stored filters if no new filters provided
+	if len(filters) == 0 {
+		filters = subscriptions[index].Filters
+	}
+
+	// Apply filters if any
+	if len(filters) > 0 {
+		filteredInfos := make([]serverObj.ServerObj, 0)
+		for _, info := range subscriptionInfos {
+			if matchesFilters(info, filters) {
+				filteredInfos = append(filteredInfos, info)
+			}
+		}
+		subscriptionInfos = filteredInfos
+	}
+
 	infoServerRaws := make([]configure.ServerRaw, len(subscriptionInfos))
 	css := configure.GetConnectedServers()
 	cssAfter := css.Get()
@@ -262,6 +280,10 @@ func UpdateSubscription(index int, disconnectIfNecessary bool) (err error) {
 	subscriptions[index].Servers = infoServerRaws
 	subscriptions[index].Status = string(touch.NewUpdateStatus())
 	subscriptions[index].Info = status
+	// Update filters if new ones provided
+	if len(filters) > 0 {
+		subscriptions[index].Filters = filters
+	}
 	return configure.SetSubscription(index, &subscriptions[index])
 }
 

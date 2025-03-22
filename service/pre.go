@@ -143,7 +143,7 @@ func initConfigure() {
 			subs := configurev4.GetSubscriptionsV2()
 			for _, sub := range subs {
 				log.Info("Importing subscription: %v", sub.Address)
-				if e := service.Import(sub.Address, nil); e != nil {
+				if e := service.Import(sub.Address, nil, nil); e != nil {
 					log.Warn("Failed to migrate subscription: %v", sub.Address)
 				}
 			}
@@ -152,7 +152,7 @@ func initConfigure() {
 					TYPE: configurev4.ServerType,
 					ID:   iSvr + 1,
 				}); e == nil {
-					if e := service.Import(addr, nil); e != nil {
+					if e := service.Import(addr, nil, nil); e != nil {
 						log.Warn("Failed to migrate server: %v", addr)
 					}
 				}
@@ -230,7 +230,7 @@ func updateSubscriptions() {
 		wg.Add(1)
 		go func(i int) {
 			control <- struct{}{}
-			err := service.UpdateSubscription(i, false)
+			err := service.UpdateSubscription(i, false, nil)
 			if err != nil {
 				log.Info("[AutoUpdate] Subscriptions: Failed to update subscription -- ID: %d，err: %v", i, err)
 			} else {

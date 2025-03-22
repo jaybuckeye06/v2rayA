@@ -44,14 +44,18 @@ func PutSubscription(ctx *gin.Context) {
 		updatingMu.Unlock()
 	}()
 
-	var data configure.Which
+	var data struct {
+		ID      int                 `json:"id"`
+		TYPE    configure.TouchType `json:"_type"`
+		Filters []string            `json:"filters"`
+	}
 	err := ctx.ShouldBindJSON(&data)
 	index := data.ID - 1
 	if err != nil || data.TYPE != configure.SubscriptionType || index < 0 || index >= configure.GetLenSubscriptions() {
 		common.ResponseError(ctx, logError("bad request: ID exceed range"))
 		return
 	}
-	err = service.UpdateSubscription(index, false)
+	err = service.UpdateSubscription(index, false, data.Filters)
 	if err != nil {
 		common.ResponseError(ctx, logError(err))
 		return

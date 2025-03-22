@@ -230,7 +230,15 @@
                 :label="$t('subscription.remarks')"
                 sortable
               >
-                {{ props.row.remarks }}
+                <template v-if="props.row.remarks">
+                  <span v-if="props.row.remarks.includes('[Filters:')">
+                    {{ props.row.remarks.split('[Filters:')[0] }}
+                    <span class="tag is-info is-light is-small">
+                      {{ props.row.remarks.split('[Filters:')[1].replace(']', '') }}
+                    </span>
+                  </span>
+                  <span v-else>{{ props.row.remarks }}</span>
+                </template>
               </b-table-column>
               <b-table-column
                 v-slot="props"
@@ -802,7 +810,7 @@ export default {
       connectedServerInfo: [],
       overHeight: false,
       clipboard: null,
-      filterFields: [],
+      filterFields: [{ value: '' }],
     };
   },
   computed: {
@@ -1245,17 +1253,21 @@ export default {
       if (typeof value != "string") {
         value = null;
       }
+      // Get non-empty filter values
+      const filters = this.filterFields
+        .map(f => f.value.trim())
+        .filter(Boolean);
+
       return this.$axios({
         url: apiRoot + "/import",
         method: "post",
         data: {
           url: value || this.importWhat,
+          filters: filters
         },
       }).then((res) => {
         if (res.data.code === "SUCCESS") {
-          // Filter the subscriptions before updating the table data
-          const filteredData = this.filterSubscriptions(res.data.data.touch);
-          this.refreshTableData(filteredData, res.data.data.running);
+          this.refreshTableData(res.data.data.touch, res.data.data.running);
           this.updateConnectView();
           this.$buefy.toast.open({
             message: this.$t("common.success"),
@@ -1266,6 +1278,8 @@ export default {
           this.showModalImport = false;
           this.showModalImportInBatch = false;
           this.importWhat = "";
+          // Reset filters after successful import
+          this.filterFields = [{ value: '' }];
         } else {
           this.$buefy.toast.open({
             message: res.data.message,
@@ -1275,29 +1289,6 @@ export default {
           });
         }
       });
-    },
-    filterSubscriptions(touch) {
-      const keywords = this.filterFields
-        .map(f => f.value.trim())
-        .filter(Boolean); // Remove empty filters
-
-      if (keywords.length === 0) {
-        return touch;
-      }
-
-      return {
-        ...touch,
-        subscriptions: touch.subscriptions.map(sub => ({
-          ...sub,
-          servers: sub.servers.filter(server => {
-            const serverName = server.name.toLowerCase();
-            // Changed from some() to every() to implement AND logic
-            return keywords.every(keyword => 
-              serverName.includes(keyword.toLowerCase())
-            );
-          })
-        }))
-      };
     },
     deleteSelectedServers() {
       this.$axios({
@@ -1534,6 +1525,7 @@ export default {
         data: {
           id: row.id,
           _type: row._type,
+          filters: [] // Empty filters will use stored filters
         },
       }).then((res) => {
         handleResponse(res, this, () => {
@@ -1566,12 +1558,18 @@ export default {
       this.showModalServer = true;
     },
     handleModalServerSubmit(url) {
+      // Get non-empty filter values
+      const filters = this.filterFields
+        .map(f => f.value.trim())
+        .filter(Boolean);
+
       this.$axios({
         url: apiRoot + "/import",
         method: "post",
         data: {
           url: url,
           which: this.which,
+          filters: filters
         },
         timeout: 0,
       }).then((res) => {
@@ -1586,6 +1584,8 @@ export default {
           this.showModalServer = false;
           this.refreshTableData(res.data.data.touch, res.data.data.running);
           this.updateConnectView();
+          // Reset filters after successful import
+          this.filterFields = [{ value: '' }];
         });
       });
     },

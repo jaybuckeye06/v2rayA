@@ -1,13 +1,16 @@
 package touch
 
 import (
-	jsoniter "github.com/json-iterator/go"
-	"github.com/v2rayA/v2rayA/db/configure"
-	"github.com/v2rayA/v2rayA/pkg/util/log"
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/v2rayA/v2rayA/db/configure"
+	"github.com/v2rayA/v2rayA/pkg/util/log"
 )
 
 /*
@@ -86,7 +89,16 @@ func GenerateTouch() (t Touch) {
 			}
 		}
 		t.Subscriptions[i] = Subscription{
-			Remarks: v.Remarks,
+			Remarks: func() string {
+				if v.Remarks != "" && len(v.Filters) > 0 {
+					return fmt.Sprintf("%s [Filters: %s]", v.Remarks, strings.Join(v.Filters, ", "))
+				} else if v.Remarks != "" {
+					return v.Remarks
+				} else if len(v.Filters) > 0 {
+					return fmt.Sprintf("[Filters: %s]", strings.Join(v.Filters, ", "))
+				}
+				return ""
+			}(),
 			ID:      i + 1,
 			Host:    u.Host,
 			Address: v.Address,

@@ -26,7 +26,7 @@ func PluginManagerValidateLink(url string) bool {
 	}
 }
 
-func Import(url string, which *configure.Which) (err error) {
+func Import(url string, which *configure.Which, filters []string) (err error) {
 	//log.Trace(url)
 	resolv.CheckResolvConf()
 	url = strings.TrimSpace(url)
@@ -34,6 +34,16 @@ func Import(url string, which *configure.Which) (err error) {
 		infos, _, err := ResolveByLines(url)
 		if err != nil {
 			return fmt.Errorf("failed to resolve addresses: %w", err)
+		}
+		// Apply filters if any
+		if len(filters) > 0 {
+			filteredInfos := make([]serverObj.ServerObj, 0)
+			for _, info := range infos {
+				if matchesFilters(info, filters) {
+					filteredInfos = append(filteredInfos, info)
+				}
+			}
+			infos = filteredInfos
 		}
 		for _, info := range infos {
 			err = configure.AppendServers([]*configure.ServerRaw{{ServerObj: info}})
@@ -50,6 +60,10 @@ func Import(url string, which *configure.Which) (err error) {
 		obj, err = ResolveURL(url)
 		if err != nil {
 			return
+		}
+		// Apply filters for single server
+		if len(filters) > 0 && !matchesFilters(obj, filters) {
+			return fmt.Errorf("server does not match any of the filters")
 		}
 		if which != nil {
 			// the request is to modify a server
@@ -102,6 +116,17 @@ func Import(url string, which *configure.Which) (err error) {
 			return fmt.Errorf("failed to resolve subscription address: %w", err)
 		}
 
+		// Apply filters if any
+		if len(filters) > 0 {
+			filteredInfos := make([]serverObj.ServerObj, 0)
+			for _, info := range infos {
+				if matchesFilters(info, filters) {
+					filteredInfos = append(filteredInfos, info)
+				}
+			}
+			infos = filteredInfos
+		}
+
 		// info to serverRawV2
 		servers := make([]configure.ServerRaw, len(infos))
 		for i, v := range infos {
@@ -125,7 +150,26 @@ func Import(url string, which *configure.Which) (err error) {
 			Status:  string(touch.NewUpdateStatus()),
 			Servers: uniqueServers,
 			Info:    status,
+			Filters: filters,
 		}})
 	}
 	return
+}
+
+// matchesFilters checks if a server matches any of the provided filters
+func matchesFilters(server serverObj.ServerObj, filters []string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	serverName := strings.ToLower(server.GetName())
+	for _, filter := range filters {
+		filter = strings.TrimSpace(filter)
+		if filter == "" {
+			continue
+		}
+		if !strings.Contains(serverName, strings.ToLower(filter)) {
+			return false
+		}
+	}
+	return true
 }
