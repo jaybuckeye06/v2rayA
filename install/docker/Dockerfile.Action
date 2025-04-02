@@ -1,5 +1,6 @@
 FROM alpine:latest AS builder
 WORKDIR /
+RUN apk update && apk add --no-cache curl jq unzip bash
 COPY ./install/docker/docker_helper.sh ./docker_helper.sh
 COPY ./install/docker/iptables.sh ./iptables.sh
 COPY ./install/docker/ip6tables.sh ./ip6tables.sh
