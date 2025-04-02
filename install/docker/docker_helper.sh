@@ -21,6 +21,25 @@ case "$(arch)" in
     *)
         ;;
 esac
+# 设置 GitHub 仓库信息
+OWNER="wasd13579"
+REPO="v2rayA"
+GITHUB_TOKEN="$GITHUB_TOKEN" 
+
+# 获取最新构建的 ID
+BUILD_ID=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/actions/runs" | jq -r '.workflow_runs[0].id')
+
+# 获取最新构建的产物链接
+ARTIFACTS=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/actions/runs/$BUILD_ID/artifacts")
+ARTIFACT_URL=$(echo "$ARTIFACTS" | jq -r '.artifacts[0].archive_download_url')
+
+# 使用 wget 下载构建产物
+echo "Downloading artifact from: $ARTIFACT_URL"
+wget --header="Authorization: Bearer $GITHUB_TOKEN" "$ARTIFACT_URL" -O v2raya_linux_x64_latest
+
+# 解压并安装
+unzip /path/to/save/v2raya_linux_x64_latest.zip -d /usr/local/bin
+install /usr/local/bin/v2raya_linux_x64_latest /usr/bin/v2raya
 mkdir -p build && cd build || exit
 wget https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-$v2ray_arch.zip
 wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-$v2ray_arch.zip
@@ -29,7 +48,7 @@ unzip v2ray-linux-"$v2ray_arch".zip -d v2ray
 install ./v2ray/v2ray /usr/local/bin/v2ray
 unzip Xray-linux-"$v2ray_arch".zip -d xray
 install ./xray/xray /usr/local/bin/xray
-install ./v2raya_linux_"$v2raya_arch"_Realv2rayAVersion /usr/bin/v2raya
+install ./v2raya_linux_x64_latest /usr/bin/v2raya
 mkdir /usr/local/share/v2raya
 ln -s /usr/local/share/v2raya /usr/local/share/v2ray
 ln -s /usr/local/share/v2raya /usr/local/share/xray
