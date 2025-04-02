@@ -150,8 +150,11 @@ jobs:
         file: install/docker/Dockerfile.Action
         platforms: linux/amd64
         push: true
+        build-args: |
+          VERSION=${{ steps.prep.outputs.tag }}
         tags: |
           ${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}
           ${{ steps.prep.outputs.image }}:latest
         cache-from: type=gha
-        cache-to: type=gha,mode=max 
+        cache-to: type=gha,mode=max
+
