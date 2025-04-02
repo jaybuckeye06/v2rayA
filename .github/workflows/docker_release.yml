@@ -94,7 +94,7 @@ jobs:
         $filename = $((Get-Content ./install/friendly-filenames.json | ConvertFrom-Json)."linux-amd64")."friendlyName"
         Set-Location -Path service
         go build -tags "with_gvisor" -o ../v2raya_binaries/v2raya_${filename}_${env:VERSION} -ldflags="-X github.com/v2rayA/v2rayA/conf.Version=${env:VERSION} -s -w" -trimpath
-        ls ../v2raya_binaries/v2raya
+        ls -l /home/runner/work/v2rayA/v2rayA
         Set-Location -Path ..
     - name: Upload Artifact
       uses: nanoufo/action-upload-artifacts-and-release-assets@v2
