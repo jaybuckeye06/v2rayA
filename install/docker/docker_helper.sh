@@ -35,7 +35,7 @@ ARTIFACT_URL=$(echo "$ARTIFACTS" | jq -r '.artifacts[0].archive_download_url')
 
 # 使用 wget 下载构建产物
 echo "Downloading artifact from: $ARTIFACT_URL"
-wget "$ARTIFACT_URL" -O v2raya_linux_x64_latest.zip
+wget --header="Authorization: token $docker" "$ARTIFACT_URL" -O v2raya_linux_x64_latest.zip
 # 解压并安装
 unzip v2raya_linux_x64_latest.zip -d /usr/local/bin
 install /usr/local/bin/v2raya /usr/bin/v2raya
