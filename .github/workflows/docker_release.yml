@@ -104,7 +104,7 @@ jobs:
     - name: Upload binary to GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ inputs.tag }}
+        tag_name: latest
         files: v2raya_binaries/v2raya_${{ env.VERSION }}
       env:
         GITHUB_TOKEN: ${{ secrets.docker }}
@@ -150,8 +150,6 @@ jobs:
         file: install/docker/Dockerfile.Action
         platforms: linux/amd64
         push: true
-        build-args: |
-          VERSION=${{ steps.prep.outputs.tag }}
         tags: |
           ${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}
           ${{ steps.prep.outputs.image }}:latest
