@@ -105,7 +105,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ inputs.tag }}
-        files: v2raya_binaries/v2raya_${{ env.VERSION }}
+        files: v2raya_binaries/v2raya_${{ env.filename }}_${{ env.VERSION }}
       env:
         GITHUB_TOKEN: ${{ secrets.docker }}
 
