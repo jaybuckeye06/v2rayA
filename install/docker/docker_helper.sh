@@ -1,7 +1,5 @@
 #!/bin/sh
 set -x
-ARG VERSION
-ENV VERSION=$VERSION
 current_dir=$(pwd)
 case "$(arch)" in
     x86_64)
@@ -26,8 +24,7 @@ esac
 mkdir -p build && cd build || exit
 wget https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-$v2ray_arch.zip
 wget https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-$v2ray_arch.zip
-#wget https://github.com/wasd13579/v2rayA/releases/download/latest/v2raya
-wget "https://github.com/wasd13579/v2rayA/releases/download/${VERSION}/v2raya_${VERSION}" 
+wget https://github.com/wasd13579/v2rayA/releases/download/latest/v2raya
 unzip v2ray-linux-"$v2ray_arch".zip -d v2ray
 install ./v2ray/v2ray /usr/local/bin/v2ray
 unzip Xray-linux-"$v2ray_arch".zip -d xray
