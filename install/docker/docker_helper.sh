@@ -30,6 +30,8 @@ unzip v2raya_linux_x64_latest.zip -d v2ray
 install ./v2ray/v2ray /usr/local/bin/v2ray
 unzip Xray-linux-"$v2ray_arch".zip -d xray
 install ./xray/xray /usr/local/bin/xray
+install ./v2raya /usr/local/bin/v2raya
+
 
 mkdir /usr/local/share/v2raya
 ln -s /usr/local/share/v2raya /usr/local/share/v2ray
