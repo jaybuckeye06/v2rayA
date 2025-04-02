@@ -103,12 +103,12 @@ jobs:
           v2raya_binaries/*
     - name: Upload binary to GitHub Release
       uses: softprops/action-gh-release@v1
-      if: github.event_name == 'workflow_dispatch'  # 或根据你的触发方式调整
       with:
-        tag_name: ${{ inputs.tag }}
+        tag_name: latest
         files: v2raya_binaries/v2raya
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.docker }}
+
 
 
 
