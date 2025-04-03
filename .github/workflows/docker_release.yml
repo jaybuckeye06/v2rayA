@@ -93,13 +93,26 @@ jobs:
         $env:GOARCH = 'amd64'
         $filename = $((Get-Content ./install/friendly-filenames.json | ConvertFrom-Json)."linux-amd64")."friendlyName"
         Set-Location -Path service
-        go build -tags "with_gvisor" -o ../v2raya_binaries/v2raya_${filename}_${env:VERSION} -ldflags="-X github.com/v2rayA/v2rayA/conf.Version=${env:VERSION} -s -w" -trimpath
+        go build -tags "with_gvisor" -o ../v2raya_binaries/v2raya_${env:VERSION} -ldflags="-X github.com/v2rayA/v2rayA/conf.Version=${env:VERSION} -s -w" -trimpath
+        ls -l /home/runner/work/v2rayA/v2rayA/v2raya_binaries/*
         Set-Location -Path ..
     - name: Upload Artifact
       uses: nanoufo/action-upload-artifacts-and-release-assets@v2
       with:
         path: |
           v2raya_binaries/*
+    - name: Upload binary to GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: latest
+        files: v2raya_binaries/v2raya_${{ env.VERSION }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.docker }}
+
+
+
+
+
 
   Release_v2rayA_to_Docker:
     runs-on: ubuntu-22.04
@@ -118,7 +131,7 @@ jobs:
         version=$(echo ${{ inputs.tag }} | sed 's/v//g')
         echo "VERSION=$version" >> $GITHUB_OUTPUT
         echo "VERSION=$version" >> $GITHUB_ENV
-        IMAGE="jaybuckeye2006/v2raya"
+        IMAGE="wasd13579/v2raya"
         echo "image=${IMAGE}" >> $GITHUB_OUTPUT
         echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
         sed -i "s|Realv2rayAVersion|$version|g" install/docker/docker_helper.sh
@@ -141,4 +154,5 @@ jobs:
           ${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}
           ${{ steps.prep.outputs.image }}:latest
         cache-from: type=gha
-        cache-to: type=gha,mode=max 
+        cache-to: type=gha,mode=max
+
