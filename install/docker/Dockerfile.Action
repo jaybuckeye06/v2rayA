@@ -3,10 +3,11 @@ WORKDIR /
 COPY ./install/docker/docker_helper.sh ./docker_helper.sh
 COPY ./install/docker/iptables.sh ./iptables.sh
 COPY ./install/docker/ip6tables.sh ./ip6tables.sh
+COPY ./install/docker/tproxy-hook.sh ./tproxy-hook.sh
 RUN sh -c "$(cat ./docker_helper.sh)"
 RUN rm ./docker_helper.sh
 EXPOSE 2017
 VOLUME /etc/v2raya
 #ENTRYPOINT ["v2raya"]
-ENTRYPOINT ["v2raya", "--transparent-hook", "/etc/v2raya/tproxy-hook.sh"]
+ENTRYPOINT ["v2raya", "--transparent-hook", "/tproxy-hook.sh"]
 
